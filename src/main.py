@@ -1,60 +1,119 @@
-from sqlalchemy import create_engine,Table,Column,Integer,String,MetaData
+# coding=UTF-8
+from sqlalchemy import create_engine,Table,Column,Integer,String,MetaData,Date,LargeBinary,DateTime,BigInteger,Float
 from geoalchemy2 import Geometry
-import sys,ogr
+import sys,ogr,os
 from osgeo import gdal
+from osgeo.osr import  SpatialReference
+from config import config,importdatatype
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+import datetime
+Base = declarative_base()
 
-def openShp(filename,layername):
+class Spatial(Base):
+    __tablename__='spatial_ref_sys'
+    srid=Column(Integer,primary_key=True)
+    auth_name=Column(String(256))
+    auth_srid=Column(Integer)
+    srtext=Column(String(2048))
+    proj4text=Column(String(2048))
+
+def openshapefile(filename):
     ds = gdal.OpenEx(filename, gdal.OF_VECTOR)
     if ds is None:
         print "Open failed.%s\n"%filename
         sys.exit(1)
-    lyr = ds.GetLayerByName(layername)
-    lyr.ResetReading()
+        os.path.split()
+    return ds
 
-    for feat in lyr:
-        print "**********************************"
-        print feat.ExportToJson()
-        feat_defn = lyr.GetLayerDefn()
-        for i in range(feat_defn.GetFieldCount()):
-            field_defn = feat_defn.GetFieldDefn(i)
-            # Tests below can be simplified with just :
-            # print feat.GetField(i)
-            if field_defn.GetType() == ogr.OFTInteger or field_defn.GetType() == ogr.OFTInteger64:
-                print "%d" % feat.GetFieldAsInteger64(i)
-            elif field_defn.GetType() == ogr.OFTReal:
-                print "%.3f" % feat.GetFieldAsDouble(i)
-            elif field_defn.GetType() == ogr.OFTString:
-                print "%s" % feat.GetFieldAsString(i)
+
+def runtool():
+    engine = create_engine(config.DATABASE_URL, echo=True)
+    Session = sessionmaker(bind=engine)
+    session=Session()
+    # 单个ShapeFile导入
+    if config.IMPORT_DATA_TYPE==importdatatype.SHAPEFILE:
+        layername = os.path.splitext(os.path.basename(config.IMPORTFILENAME))
+        dataset=openshapefile(config.IMPORTFILENAME)
+        data_layer=dataset.GetLayerByName(layername[0])
+#        创建表
+        feat_defn = data_layer.GetLayerDefn()
+        geometry_defn = feat_defn.GetGeomFieldDefn(0)
+        spatial_ref=geometry_defn.GetSpatialRef()
+        #  查询数据库表来获取Srid
+        out_spatial= session.query(Spatial).filter_by(proj4text=spatial_ref.ExportToProj4()).first()
+        srid=-1
+        if out_spatial is not None:
+            srid=out_spatial.auth_srid
+        fieldCount=feat_defn.GetFieldCount()
+        metadata = MetaData()
+        newtable=Table(layername[0].lower(),metadata)
+        newtable.append_column(Column('FID',Integer,primary_key=True))
+        for i in range(fieldCount):
+            newtable.append_column(getTableColumn(feat_defn.GetFieldDefn(i)))
+#         设置图形字段
+        newtable.append_column(GetGeometryColumn(feat_defn,srid))
+        newtable.create(engine)
+        metadata.create_all(engine)
+#         读取数据，并存入数据库中
+        featDic={}
+        conn = engine.connect()
+        for feat in data_layer:
+            for i in range(fieldCount):
+                field_defn = feat_defn.GetFieldDefn(i)
+                featDic[field_defn.GetName()] = feat.GetField(i)
+            if feat.GetFID() is not None:
+                featDic['FID']=feat.GetFID()
+#             获取图形信息
+            geom=feat.GetGeometryRef()
+            wkt_geom=geom.ExportToWkt()
+            if srid != -1:
+                featDic['geom'] = 'SRID='+str(srid)+';'+wkt_geom
             else:
-                print "%s" % feat.GetFieldAsString(i)
-        geom = feat.GetGeometryRef()
-        if geom is not None :
-            if geom.GetGeometryType()==ogr.wkbPoint or geom.GetGeometryType()==ogr.wkbMultiPoint:
-                 print "point X:%.3f,point Y: %.3f" % (geom.GetX(), geom.GetY())
-                 print geom.ExportToWkt()
-           # print "%.3f, %.3f" % (geom.GetX(), geom.GetY())
-        else:
-            print "no  geometry\n"
-    ds = None
-def open_postgisdb():
-    engine = create_engine('postgresql://postgres:sufan2008300379@localhost/dbgeoserver', echo=True)
-    metadata = MetaData()
-    lake_tabl=Table('lake',metadata,Column('id',Integer,primary_key=True),Column('name',String),Column('geom',Geometry(geometry_type='POLYGON', srid=4326)))
-    lake_tabl.create(engine)
-    ins = lake_tabl.insert()
-    print str(ins)
-    ins=lake_tabl.insert().values(name="Majeur",geom='SRID=4326;POLYGON((0 0,1 0,1 1,0 1,0 0))')
-    print str(ins)
-    # ins.compile.params()
-    conn=engine.connect()
-    result=conn.execute(ins)
-    result.inserted_primary_key
-    conn.execute(lake_tabl.insert(),name='sufan',geom='SRID=4326;POLYGON((0 0,1 0,1 1,0 1,0 0))')
+                featDic['geom'] = wkt_geom
+            conn.execute(newtable.insert(),[featDic])
+    # ShapeFile 文件夹导入
+    elif config.IMPORT_DATA_TYPE==importdatatype.SHAPEFILEPATH:
 
 
+def getTableColumn(field_defn):
+    field_type=field_defn.GetType()
+    field_name=field_defn.GetName()
+    if field_type == ogr.OFTBinary:
+        return Column(field_name,LargeBinary)
+    elif field_type == ogr.OFTDate:
+        return Column(field_name,Date)
+    elif field_type == ogr.OFTDateTime:
+        return Column(field_name,DateTime)
+    elif field_type == ogr.OFTInteger:
+        return Column(field_name,Integer)
+    elif field_type == ogr.OFTInteger64:
+        return  Column(field_name,BigInteger)
+    elif field_type == ogr.OFTReal:
+        return  Column(field_name,Float)
+    elif field_type == ogr.OFTString:
+        return  Column(field_name,String(field_defn.GetWidth()))
+
+def GetGeometryColumn(geometry_defn,Srid_Value):
+    geometry_type=geometry_defn.GetGeomType()
+    if geometry_type==ogr.wkbPoint:
+        return Column('geom',Geometry(geometry_type='POINT', srid=Srid_Value))
+    elif geometry_type==ogr.wkbMultiPoint:
+        return Column('geom',Geometry(geometry_type='MULTIPOINT', srid=Srid_Value))
+    elif geometry_type==ogr.wkbLineString:
+        return Column('geom',Geometry(geometry_type='LINESTRING', srid=Srid_Value))
+    elif geometry_type == ogr.wkbMultiLineString:
+        return Column('geom',Geometry(geometry_type='MULTILINESTRING', srid=Srid_Value))
+    elif geometry_type == ogr.wkbPolygon:
+        return Column('geom',Geometry(geometry_type='POLYGON', srid=Srid_Value))
+    elif geometry_type == ogr.wkbMultiPolygon:
+        return Column('geom',Geometry(geometry_type='MULTIPOLYGON', srid=Srid_Value))
+    elif geometry_type == ogr.wkbGeometryCollection:
+        return Column('geom',Geometry(geometry_type='GEOMETRYCOLLECTION', srid=Srid_Value))
+    elif geometry_type == ogr.wkbCurve:
+        return Column('geom',Geometry(geometry_type='CURVE', srid=Srid_Value))
+    else:
+        return Column('geom',Geometry(geometry_type='POINT', srid=Srid_Value))
 
 if __name__=="__main__":
-    # engine = create_engine("postgresql://posgres:sufan2008300379@127.0.0.1/dbgeoserver", echo=True)
-    #  openShp("E:\\test\\data_shp\\DLGK_HYD_PT.shp","DLGK_HYD_PT")
-     open_postgisdb()
-   # print engine
+    runtool()
