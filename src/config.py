@@ -27,4 +27,4 @@ class config:
     DATABASE_URL = "postgresql://postgres:sufan2008300379@localhost/dbgeoserver"
     Enum = importdatatype()
     IMPORT_DATA_TYPE = Enum.SHAPEFILEPATH
-    IMPORTFILENAME = 'E:\\test\\data_shp'
+    IMPORTFILENAME = 'E:\\test\\test_polygon'
