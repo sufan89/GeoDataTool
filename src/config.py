@@ -22,14 +22,15 @@ class importdatatype:
 
 class TOOLOPERATYPE:
     INSERT = 1
-    CREATR = 2
+    CREATRANDINSERT = 2
     UPDATE = 3
     EXPORT = 4
+    CREATE = 5
 
 
 class config:
-    DATABASE_URL = "postgresql://postgres:sufan2008300379@localhost/dbgeoserver"
+    DATABASE_URL = ""
     Enum = importdatatype()
-    IMPORT_DATA_TYPE = Enum.FILEGEODATABASE
-    IMPORTFILENAME = 'E:\\test\\New File Geodatabase.gdb'
-    OPERATETYPE=TOOLOPERATYPE.INSERT
+    IMPORT_DATA_TYPE = Enum.SHAPEFILEPATH
+    IMPORTFILENAME = ''
+    OPERATETYPE = TOOLOPERATYPE.INSERT
