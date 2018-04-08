@@ -1,7 +1,7 @@
 # coding=UTF-8
 
 
-
+# 导入数据类型
 class importdatatype:
     def __init__(self):
         pass
@@ -20,7 +20,9 @@ class importdatatype:
     OTHER = 0
 
 
+# 工具操作类型
 class TOOLOPERATYPE:
+    '''只导入'''
     INSERT = 1
     CREATRANDINSERT = 2
     UPDATE = 3
@@ -28,9 +30,10 @@ class TOOLOPERATYPE:
     CREATE = 5
 
 
+# 工具配置
 class config:
-    DATABASE_URL = ""
+    DATABASE_URL = "postgresql://dev:asdasd123@120.132.120.177/vearth"
     Enum = importdatatype()
-    IMPORT_DATA_TYPE = Enum.SHAPEFILEPATH
-    IMPORTFILENAME = ''
-    OPERATETYPE = TOOLOPERATYPE.INSERT
+    IMPORT_DATA_TYPE = Enum.FILEGEODATABASE
+    IMPORTFILENAME = 'F:\\1\\vearth.gdb'
+    OPERATETYPE = TOOLOPERATYPE.CREATRANDINSERT
