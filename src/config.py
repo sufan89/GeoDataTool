@@ -22,17 +22,23 @@ class importdatatype:
 
 # 工具操作类型
 class TOOLOPERATYPE:
-    '''只导入'''
+    # 只导入
     INSERT = 1
+    # 创建表并导入
     CREATRANDINSERT = 2
+    # 更新
     UPDATE = 3
+    #导出
     EXPORT = 4
+    # 创建表结构
     CREATE = 5
+    # 创建GIS物体对象
+    CREATEOBJECT=6
 
 
 # 工具配置
 class config:
-    DATABASE_URL = "postgresql://dev:asdasd123@120.132.120.177/vearth"
+    DATABASE_URL = "postgresql://postgres:sufan2008300379@localhost/vearth"
     Enum = importdatatype()
     IMPORT_DATA_TYPE = Enum.FILEGEODATABASE
     IMPORTFILENAME = 'F:\\1\\vearth.gdb'

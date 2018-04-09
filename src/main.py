@@ -8,14 +8,13 @@ from config import config, importdatatype, TOOLOPERATYPE
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import chardet
+from geoimport import Importfactory
 
 
 Base = declarative_base()
 engine = create_engine(config.DATABASE_URL, echo=False)
 Session = sessionmaker(bind=engine)
 session = Session()
-
-
 class Spatial(Base):
     __tablename__ = 'spatial_ref_sys'
     srid = Column(Integer, primary_key=True)
@@ -23,7 +22,6 @@ class Spatial(Base):
     auth_srid = Column(Integer)
     srtext = Column(String(2048))
     proj4text = Column(String(2048))
-
 # 获取所有ShapeFile文件名称
 def GetAllShapeFileName(ShapeFilePath):
     List_File = []
@@ -34,7 +32,6 @@ def GetAllShapeFileName(ShapeFilePath):
         elif os.path.splitext(file_path)[1] == '.shp':
             List_File.append(file_path)
     return List_File
-
 # 打开ShapeFile
 def openshapefile(filename):
     ogr.RegisterAll()
@@ -46,7 +43,6 @@ def openshapefile(filename):
         print "Open failed.%s\n" % filename
         sys.exit(1)
     return ds
-
 # 打开FileGDB
 def OpenFileGeodatabase(FileName):
     ds = gdal.OpenEx(FileName, gdal.OF_VECTOR)
@@ -54,7 +50,6 @@ def OpenFileGeodatabase(FileName):
         print "Open failed.%s\n" % FileName
         sys.exit(1)
     return ds
-
 
 def runtool():
     # 单个ShapeFile导入
@@ -71,13 +66,12 @@ def runtool():
                 ImportShapeFile(ShapeFileName)
     elif config.IMPORT_DATA_TYPE == importdatatype.FILEGEODATABASE:
         ImportFileDataBase(config.IMPORTFILENAME)
-
 # 导入ShapFile
 def ImportShapeFile(ShapeFileName):
     layername = os.path.splitext(os.path.basename(ShapeFileName))
     dataset = openshapefile(ShapeFileName)
     data_layer = dataset.GetLayerByName(layername[0])
-    #        创建表
+    #创建表
     feat_defn = data_layer.GetLayerDefn()
     geometry_defn = feat_defn.GetGeomFieldDefn(0)
     spatial_ref = geometry_defn.GetSpatialRef()
@@ -96,7 +90,7 @@ def ImportShapeFile(ShapeFileName):
     newtable.append_column(GetGeometryColumn(feat_defn, srid))
     newtable.create(engine)
     metadata.create_all(engine)
-    #         读取数据，并存入数据库中
+    #读取数据，并存入数据库中
     featDic = {}
     conn = engine.connect()
     for feat in data_layer:
@@ -119,7 +113,6 @@ def ImportShapeFile(ShapeFileName):
         else:
             featDic['geom'] = wkt_geom
         conn.execute(newtable.insert(), [featDic])
-
 # 导入FileGDB
 def ImportFileDataBase(FileName):
     ds = OpenFileGeodatabase(FileName)
@@ -163,7 +156,6 @@ def ImportFileDataBase(FileName):
             else:
                 featDic['geom'] = wkt_geom
             conn.execute(newtable.insert(), [featDic])
-
 # 将单点，单线，单面转换成多点、多线、多面
 def getNewGeometry(GeomtryRef):
     if GeomtryRef.GetGeometryType() == ogr.wkbPoint:
@@ -180,7 +172,7 @@ def getNewGeometry(GeomtryRef):
         return NewGeometry
     else:
         return GeomtryRef
-
+# 根据数据列获取数据库列信息
 def getTableColumn(field_defn):
     field_type = field_defn.GetType()
     field_name = field_defn.GetName().lower()
@@ -198,7 +190,7 @@ def getTableColumn(field_defn):
         return Column(field_name, Float)
     elif field_type == ogr.OFTString:
         return Column(field_name, String(field_defn.GetWidth()))
-
+# 获取Geometry列信息
 def GetGeometryColumn(geometry_defn, Srid_Value):
     geometry_type = geometry_defn.GetGeomType()
     print geometry_type
@@ -273,5 +265,9 @@ def GetGeometryColumn(geometry_defn, Srid_Value):
         return Column('geom', Geometry(geometry_type='POINT', srid=Srid_Value))
 
 if __name__ == "__main__":
-    runtool()
+    toolimport=Importfactory(config)
+    if toolimport is not None:
+        toolimport.runimport()
+    # runtool()
+
 
