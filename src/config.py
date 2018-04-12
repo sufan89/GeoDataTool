@@ -40,6 +40,6 @@ class TOOLOPERATYPE:
 class config:
     DATABASE_URL = "postgresql://postgres:sufan2008300379@localhost/vearth"
     Enum = importdatatype()
-    IMPORT_DATA_TYPE = Enum.FILEGEODATABASE
-    IMPORTFILENAME = 'F:\\1\\vearth.gdb'
+    IMPORT_DATA_TYPE = Enum.SHAPEFILEPATH
+    IMPORTFILENAME = 'F:\\testdata'
     OPERATETYPE = TOOLOPERATYPE.CREATRANDINSERT

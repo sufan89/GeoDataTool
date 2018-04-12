@@ -1,4 +1,4 @@
 # coding=UTF-8
-from dboperate import dboperate
+from DbOperator import DbOperator
 
-__all__ = ["dboperate",]
+__all__ = ["DbOperator",]
