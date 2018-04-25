@@ -1,10 +1,13 @@
 # coding=UTF-8
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, Date, LargeBinary, DateTime, BigInteger, \
-    Float
+    Float, JSON
 from sqlalchemy.orm import sessionmaker
 from osgeo import ogr
-from geoalchemy2 import Geometry
+from geoalchemy2 import Geometry, Raster
+import uuid
+import json
+import datetime
 
 Base = declarative_base()
 
@@ -156,6 +159,19 @@ class DbOperator:
         newtable.append_column(self.GetGeometryColumn(feat_defn, srid))
         return [newtable, srid]
 
+    def GetIearthTahle(self):
+        '''获取表结构'''
+        newtable = Table('table_86_0755', self.m_metadata)
+        newtable.append_column(Column('id', String(32), primary_key=True))
+        newtable.append_column(Column('type', Integer))
+        newtable.append_column(Column('gis_name', String(50)))
+        newtable.append_column(Column('indate', DateTime))
+        newtable.append_column(Column('vadate', DateTime))
+        newtable.append_column(Column('remark', String(255)))
+        newtable.append_column(Column('geom', Geometry))
+        newtable.append_column(Column('detailjson'))
+        return [newtable, 3857]
+
     def InsertData(self, insertTable, imLayer, srid=-1):
         """向数据库中插入数据"""
         featDic = {}
@@ -187,11 +203,66 @@ class DbOperator:
             if insertCount == 1000:
                 conn.execute(insertTable.insert(), insetData)
                 insertCount = 0
-                insetData=[]
+                insetData = []
                 print "已完成导入：%s" % round(insertper, 2)
         if insertCount != 0:
             conn.execute(insertTable.insert(), insetData)
         print "完成对图层：%s的导入" % imLayer.GetName()
+
+    def InsertIearthData(self, insertTable, imLayer, srid=-1):
+        """向数据库中插入数据"""
+        featDic = {}
+        conn = self.m_engine.connect()
+        feat_defn = imLayer.GetLayerDefn()
+        fieldCount = feat_defn.GetFieldCount()
+        insertCount = 0
+        totalInsertCount = 0
+        insetData = []
+        featureCount = imLayer.GetFeatureCount()
+        layertName = imLayer.GetName()
+        for feat in imLayer:
+            attri = {}  # 要素属性，存成JSON
+            featDic['id'] = self.GetNewId()
+            featDic['gis_name'] = layertName
+            for i in range(fieldCount):
+                field_defn = feat_defn.GetFieldDefn(i)
+                if field_defn.GetName().lower() == 'shape_length' or field_defn.GetName().lower() == 'shape_area':
+                    continue
+                attri[field_defn.GetName().lower()] = feat.GetField(i)
+            # 将属性转换成JSon对象
+            featDic['detailjson'] = json.dumps(attri)
+            # if feat.GetFID() is not None:
+            #     featDic['gis_id'] = feat.GetFID()
+            # 获取图形信息
+            geom = feat.GetGeometryRef()
+            wkt_geom = geom.ExportToIsoWkt()
+            if srid != -1:
+                featDic['geom'] = 'SRID=' + str(srid) + ';' + wkt_geom
+            else:
+                featDic['geom'] = wkt_geom
+            featDic['type'] = geom.GetGeometryType()
+            featDic['indate'] = datetime.datetime.now()
+            insetData.append(featDic.copy())
+            featDic.clear()
+            insertCount = insertCount + 1
+            totalInsertCount = totalInsertCount + 1
+            insertper = totalInsertCount / (featureCount * 1.0) * 100
+            if insertCount == 1000:
+                conn.execute(insertTable.insert(), insetData)
+                insertCount = 0
+                insetData = []
+                print "已完成导入：%s" % round(insertper, 2)
+        if insertCount != 0:
+            conn.execute(insertTable.insert(), insetData)
+        print "完成对图层：%s的导入" % imLayer.GetName()
+
+    def GetNewId(self):
+        '''获取32为UID'''
+        newID = ''
+        newID = str(uuid.uuid4())
+        l_uuid = newID.split('-')
+        newID = ''.join(l_uuid)
+        return newID
 
 
 class Spatial(Base):
@@ -202,3 +273,6 @@ class Spatial(Base):
     auth_srid = Column(Integer)
     srtext = Column(String(2048))
     proj4text = Column(String(2048))
+
+
+

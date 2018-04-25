@@ -28,18 +28,19 @@ class TOOLOPERATYPE:
     CREATRANDINSERT = 2
     # 更新
     UPDATE = 3
-    #导出
+    # 导出
     EXPORT = 4
     # 创建表结构
     CREATE = 5
     # 创建GIS物体对象
-    CREATEOBJECT=6
+    CREATEOBJECT = 6
 
 
 # 工具配置
 class config:
-    DATABASE_URL = "postgresql://postgres:sufan2008300379@localhost/vearth"
+    DATABASE_URL = ""
     Enum = importdatatype()
-    IMPORT_DATA_TYPE = Enum.SHAPEFILEPATH
-    IMPORTFILENAME = 'F:\\testdata'
-    OPERATETYPE = TOOLOPERATYPE.CREATRANDINSERT
+    IMPORT_DATA_TYPE = Enum.FILEGEODATABASE
+    IMPORTFILENAME = ''
+    OPERATETYPE = TOOLOPERATYPE.INSERT
+    MainTableName = ""
