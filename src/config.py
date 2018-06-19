@@ -35,12 +35,26 @@ class TOOLOPERATYPE:
     # 创建GIS物体对象
     CREATEOBJECT = 6
 
+class IEARTHDATATYPE:
+    '''导入数据类型'''
+    # 智慧城市基础数据
+    IEARTHDATA=1
+    # 智慧城市区域数据
+    IEARA=2
+    # 其他数据
+    OTHER=0
+
+
+
 
 # 工具配置
 class config:
-    DATABASE_URL = ""
+    # DATABASE_URL="postgresql://dev:asdasd123@192.168.1.158/sz_db"
+    # DATABASE_URL = "postgresql://dba_iearth:fengdays0105@10.28.11.7/db_iearth_gis"
+    DATABASE_URL = "postgresql://dba_iearth:fengdays0105@192.168.1.201/db_iearth_gis"
     Enum = importdatatype()
     IMPORT_DATA_TYPE = Enum.FILEGEODATABASE
-    IMPORTFILENAME = ''
+    IMPORTFILENAME = 'F:\\temp\\terrain.gdb'
     OPERATETYPE = TOOLOPERATYPE.INSERT
-    MainTableName = ""
+    IMPORT_IEARTHTYPE=IEARTHDATATYPE.IEARA
+
