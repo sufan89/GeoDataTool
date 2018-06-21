@@ -43,7 +43,12 @@ class ToolOperator:
                 if layername not in layernames:
                     continue
             insertTable = None
-            insertTable = self.m_dbOpera.GetTable(layer)
+            if  self.m_Config.IMPORT_IEARTHTYPE==1:
+                insertTable = self.m_dbOpera.GetIearthTahle()
+            elif self.m_Config.IMPORT_IEARTHTYPE==2:
+                insertTable=self.m_dbOpera.CreateIearthAreaTable()
+            else:
+                insertTable =self.m_dbOpera.GetTable(layer)
             if insertTable is not None:
                 print "表:%s获取成功" % layer.GetName()
             else:
@@ -51,8 +56,14 @@ class ToolOperator:
                 continue
                 #             导入操作
             print "开始对图层:%s进行导入操作" % layer.GetName()
-            self.m_dbOpera.InsertData(insertTable[0], layer, insertTable[1])
-        pass
+            if self.m_Config.IMPORT_IEARTHTYPE==1:
+                self.m_dbOpera.InsertIearthData(insertTable[0], layer, insertTable[1])
+            elif self.m_Config.IMPORT_IEARTHTYPE==2:
+                self.m_dbOpera.InsertAreaData(insertTable[0], layer, insertTable[1])
+            else:
+                self.m_dbOpera.InsertData(insertTable[0], layer, insertTable[1])
+
+
 
     def CreateAndInsert(self, dataset=None, layernames=[]):
         '''创建数据并导入数据'''

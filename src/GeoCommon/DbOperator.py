@@ -1,10 +1,13 @@
 # coding=UTF-8
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, Date, LargeBinary, DateTime, BigInteger, \
-    Float
+    Float, JSON
 from sqlalchemy.orm import sessionmaker
 from osgeo import ogr
-from geoalchemy2 import Geometry
+from geoalchemy2 import Geometry, Raster
+import uuid
+import json
+import datetime
 
 Base = declarative_base()
 
@@ -156,6 +159,27 @@ class DbOperator:
         newtable.append_column(self.GetGeometryColumn(feat_defn, srid))
         return [newtable, srid]
 
+    def GetIearthTahle(self):
+        '''获取表结构'''
+        newtable = Table('table_86_0755', self.m_metadata)
+        newtable.append_column(Column('id', String(32), primary_key=True))
+        # newtable.append_column(Column('type', Integer))
+        newtable.append_column(Column('gis_name', String(50)))
+        newtable.append_column(Column('indate', DateTime))
+        newtable.append_column(Column('vadate', DateTime))
+        newtable.append_column(Column('remark', String(255)))
+        newtable.append_column(Column('geom', Geometry))
+        newtable.append_column(Column('detailjson'))
+        return [newtable, 3857]
+
+    def GetIearthAreaTable(self):
+        '''获取区域表结构'''
+        newtable = Table('table_scope_info', self.m_metadata)
+        newtable.append_column(Column('id', String(64), primary_key=True))
+        newtable.append_column(Column('geometry', Geometry))
+        newtable.append_column(Column('properties'))
+        return [newtable, 3857]
+
     def InsertData(self, insertTable, imLayer, srid=-1):
         """向数据库中插入数据"""
         featDic = {}
@@ -187,11 +211,149 @@ class DbOperator:
             if insertCount == 1000:
                 conn.execute(insertTable.insert(), insetData)
                 insertCount = 0
-                insetData=[]
+                insetData = []
                 print "已完成导入：%s" % round(insertper, 2)
         if insertCount != 0:
             conn.execute(insertTable.insert(), insetData)
         print "完成对图层：%s的导入" % imLayer.GetName()
+
+    def InsertIearthData(self, insertTable, imLayer, srid=-1):
+        """向数据库中插入数据"""
+        featDic = {}
+        conn = self.m_engine.connect()
+        feat_defn = imLayer.GetLayerDefn()
+        fieldCount = feat_defn.GetFieldCount()
+        insertCount = 0
+        totalInsertCount = 0
+        insetData = []
+        featureCount = imLayer.GetFeatureCount()
+        layertName = imLayer.GetName()
+        for feat in imLayer:
+            attri = {}  # 要素属性，存成JSON
+            # 获取图形信息
+            geom = feat.GetGeometryRef()
+            if geom is None:
+                continue
+            featDic['id'] = self.GetNewId()
+            featDic['gis_name'] = layertName
+            for i in range(fieldCount):
+                field_defn = feat_defn.GetFieldDefn(i)
+                if field_defn.GetName().lower() == 'shape_length' or field_defn.GetName().lower() == 'shape_area':
+                    continue
+                attri[field_defn.GetName().lower()] = feat.GetField(i)
+            # 将属性转换成JSon对象
+            featDic['detailjson'] = json.dumps(attri)
+            # if feat.GetFID() is not None:
+            #     featDic['gis_id'] = feat.GetFID()
+            wkt_geom = geom.ExportToIsoWkt()
+            if srid != -1:
+                featDic['geom'] = 'SRID=' + str(srid) + ';' + wkt_geom
+            else:
+                featDic['geom'] = wkt_geom
+            # featDic['type'] = geom.GetGeometryType()
+            featDic['indate'] = datetime.datetime.now()
+            insetData.append(featDic.copy())
+            featDic.clear()
+            insertCount = insertCount + 1
+            totalInsertCount = totalInsertCount + 1
+            insertper = totalInsertCount / (featureCount * 1.0) * 100
+            if insertCount == 1000:
+                conn.execute(insertTable.insert(), insetData)
+                insertCount = 0
+                insetData = []
+                print "已完成导入：%s" % round(insertper, 2)
+        if insertCount != 0:
+            conn.execute(insertTable.insert(), insetData)
+        print "完成对图层：%s的导入" % imLayer.GetName()
+
+    def InsertAreaData(self, insertTable, imLayer, srid=-1):
+        """向数据库中插入数据"""
+        featDic = {}
+        conn = self.m_engine.connect()
+        feat_defn = imLayer.GetLayerDefn()
+        fieldCount = feat_defn.GetFieldCount()
+        insertCount = 0
+        totalInsertCount = 0
+        insetData = []
+        featureCount = imLayer.GetFeatureCount()
+        layertName = imLayer.GetName()
+        for feat in imLayer:
+            # attri = {}  # 要素属性，存成JSON
+            # 获取图形信息
+            geom = feat.GetGeometryRef()
+            if geom is None:
+                continue
+            featDic['id'] = self.GetNewId()
+            # featDic['gis_name'] = layertName
+            for i in range(fieldCount):
+                field_defn = feat_defn.GetFieldDefn(i)
+                if field_defn.GetName().lower() == 'shape_length' or field_defn.GetName().lower() == 'shape_area' or field_defn.GetName().lower() == 'shape_leng'\
+                         or field_defn.GetName().lower() == 'id':
+                    continue
+                if field_defn.GetName().lower() == 'name':
+                    featDic['areaname'] = feat.GetField(i)
+                else:
+                    featDic[field_defn.GetName().lower()] = feat.GetField(i)
+            # 将属性转换成JSon对象
+            # featDic['properties'] = json.dumps(attri)
+            # if feat.GetFID() is not None:
+            #     featDic['gis_id'] = feat.GetFID()
+            wkt_geom = geom.ExportToIsoWkt()
+            if srid != -1:
+                featDic['geometry'] = 'SRID=' + str(srid) + ';' + wkt_geom
+            else:
+                featDic['geometry'] = wkt_geom
+            # featDic['type'] = geom.GetGeometryType()
+            # featDic['indate'] = datetime.datetime.now()
+            insetData.append(featDic.copy())
+            featDic.clear()
+            insertCount = insertCount + 1
+            totalInsertCount = totalInsertCount + 1
+            insertper = totalInsertCount / (featureCount * 1.0) * 100
+            if insertCount == 1000:
+                conn.execute(insertTable.insert(), insetData)
+                insertCount = 0
+                insetData = []
+                print "已完成导入：%s" % round(insertper, 2)
+        if insertCount != 0:
+            conn.execute(insertTable.insert(), insetData)
+        print "完成对图层：%s的导入" % imLayer.GetName()
+
+    def GetNewId(self):
+        '''获取32为UID'''
+        newID = str(uuid.uuid4())
+        l_uuid = newID.split('-')
+        newID = ''.join(l_uuid)
+        return newID
+
+    def CreateIearthAreaTable(self):
+        '''获取区域编辑表结构'''
+        newtable = Table('iearth_area', self.m_metadata)
+        '''ID'''
+        newtable.append_column(Column('id', String(32), primary_key=True))
+        '''区域名称'''
+        newtable.append_column(Column('areaname', String(50)))
+        '''坐标系'''
+        newtable.append_column(Column('projectinfo', String(50)))
+        '''创建时间'''
+        newtable.append_column(Column('createtime', DateTime,default=datetime.datetime.now()))
+        '''更新时间'''
+        newtable.append_column(Column('updatetime', DateTime))
+        '''状态:0 新增 1 修改 2 删除'''
+        newtable.append_column(Column('status', Integer,default=0))
+        '''同步状态:0 已同步 1 未同步'''
+        newtable.append_column(Column('syncstatus', Integer,default=1))
+        '''审核状态:0 未审核 1 已审核'''
+        newtable.append_column(Column('checkstatus', Integer,default=0))
+        '''审核用户标识'''
+        newtable.append_column(Column('checkuser', String(50)))
+        '''审核时间'''
+        newtable.append_column(Column('checktime', DateTime))
+        newtable.append_column(Column('geom', Geometry('MULTIPOLYGON',srid=4326)))
+        #直接调用创建操作创建表
+        newtable.create(self.m_engine)
+        self.m_metadata.create_all(self.m_engine)
+        return [newtable, 4326]
 
 
 class Spatial(Base):
