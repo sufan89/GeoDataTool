@@ -1,5 +1,5 @@
 # coding=UTF-8
-from ToolOperator import ToolOperator
+from .ToolOperator import ToolOperator
 import os, sys
 import ogr
 from osgeo import gdal
@@ -61,7 +61,7 @@ class ShapeFileOperator(ToolOperator):
         gdal.SetConfigOption("SHAPE_ENCODING", "gbk")
         ds = gdal.OpenEx(filename, gdal.OF_VECTOR)
         if ds is None:
-            print "Open failed.%s\n" % filename
+            print ("Open failed.%s\n" % filename)
             sys.exit(1)
         return ds
 

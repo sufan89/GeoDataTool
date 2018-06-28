@@ -1,7 +1,7 @@
 # coding=UTF-8
-from GDBOperator import GDBOperator
-from ShapeFileOperator import ShapeFileOperator
-from RasterOperator import RasterOperator
+from .GDBOperator import GDBOperator
+from .ShapeFileOperator import ShapeFileOperator
+from .RasterOperator import RasterOperator
 
 
 class OperatorFactory:

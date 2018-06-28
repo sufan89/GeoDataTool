@@ -140,7 +140,7 @@ class DbOperator:
     def GetTable(self, importlayer):
         '''根据图层信息创建表对象'''
         if importlayer is None:
-            print "无法创建表，无图层信息"
+            print ("无法创建表，无图层信息")
         # 创建表
         feat_defn = importlayer.GetLayerDefn()
         geometry_defn = feat_defn.GetGeomFieldDefn(0)
@@ -212,10 +212,10 @@ class DbOperator:
                 conn.execute(insertTable.insert(), insetData)
                 insertCount = 0
                 insetData = []
-                print "已完成导入：%s" % round(insertper, 2)
+                print ("已完成导入：%s" % round(insertper, 2))
         if insertCount != 0:
             conn.execute(insertTable.insert(), insetData)
-        print "完成对图层：%s的导入" % imLayer.GetName()
+        print ("完成对图层：%s的导入" % imLayer.GetName())
 
     def InsertIearthData(self, insertTable, imLayer, srid=-1):
         """向数据库中插入数据"""
@@ -261,10 +261,10 @@ class DbOperator:
                 conn.execute(insertTable.insert(), insetData)
                 insertCount = 0
                 insetData = []
-                print "已完成导入：%s" % round(insertper, 2)
+                print ("已完成导入：%s" % round(insertper, 2))
         if insertCount != 0:
             conn.execute(insertTable.insert(), insetData)
-        print "完成对图层：%s的导入" % imLayer.GetName()
+        print ("完成对图层：%s的导入" % imLayer.GetName())
 
     def InsertAreaData(self, insertTable, imLayer, srid=-1):
         """向数据库中插入数据"""
@@ -314,10 +314,10 @@ class DbOperator:
                 conn.execute(insertTable.insert(), insetData)
                 insertCount = 0
                 insetData = []
-                print "已完成导入：%s" % round(insertper, 2)
+                print ("已完成导入：%s" % round(insertper, 2))
         if insertCount != 0:
             conn.execute(insertTable.insert(), insetData)
-        print "完成对图层：%s的导入" % imLayer.GetName()
+        print ("完成对图层：%s的导入" % imLayer.GetName())
 
     def GetNewId(self):
         '''获取32为UID'''

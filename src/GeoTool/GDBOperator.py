@@ -1,6 +1,6 @@
 # coding=UTF-8
-from GeoCommon import DbOperator
-from ToolOperator import ToolOperator
+from ..GeoCommon import DbOperator
+from .ToolOperator import ToolOperator
 from osgeo import gdal
 import sys
 
@@ -13,7 +13,7 @@ class GDBOperator(ToolOperator):
         """打开FileGDB"""
         ds = gdal.OpenEx(self.m_Config.IMPORTFILENAME, gdal.OF_VECTOR)
         if ds is None:
-            print "Open FileGeodataBase failed.%s\n" % self.m_Config.IMPORTFILENAME
+            print ("Open FileGeodataBase failed.%s\n" % self.m_Config.IMPORTFILENAME)
             sys.exit(1)
         return ds
 

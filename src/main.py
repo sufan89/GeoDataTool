@@ -1,8 +1,8 @@
 # coding=utf-8
-from config import config, importdatatype, TOOLOPERATYPE
-from GeoTool import OperatorFactory
-from GeoCommon import DbOperator
-from IearthAearManager import areaquest
+from src.config import config, importdatatype, TOOLOPERATYPE
+from src.GeoTool import OperatorFactory
+from src.GeoCommon import DbOperator
+# from .IearthAearManager import areaquest
 import gdal
 import numpy
 
@@ -56,5 +56,5 @@ def CreateCopyRaster(sourcefilename, targetfilename):
 if __name__ == "__main__":
     geotool=TooFactory(config)
     geotool.RunTool()
-    print "操作成功"
+    print ("操作成功")
     # CreateCopyRaster('F:\\newtif\\New Folder\\sz_3857_smzx.tif','F:\\temp\\new4.tif')
